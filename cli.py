@@ -62,7 +62,8 @@ class Game:
 
         for col_idx in range(self.board.num_col):
             column = [
-                self.board[row_idx][col_idx] for row_idx in range(self.board.num_row)
+                self.board.board[row_idx][col_idx]
+                for row_idx in range(self.board.num_row)
             ]
             if len(set(column)) == 1:
                 return column[0]
@@ -91,21 +92,30 @@ class Game:
         self.board.create_board()
         while True:
             self.board.print()
-            input_str = input("Enter your move: ")
-            try:
-                row, col = self.get_row_col(input_str)
-                self.board.set_move(row, col, self.players[self.current_player_idx])
-            except InvalidMoveError as e:
-                print(e)
+            if not self.process_player_move():
                 continue
             winner = self.check_winner()
             if winner != " ":
-                if winner == "draw":
-                    print("It's a draw!")
-                else:
-                    print(f"{winner} is the winner!")
+                self.display_winner(winner)
                 break
             self.switch_player()
+
+    def process_player_move(self):
+        input_str = input("Enter your move: ")
+        try:
+            row, col = self.get_row_col(input_str)
+            self.board.set_move(row, col, self.players[self.current_player_idx])
+        except InvalidMoveError as e:
+            print(e)
+            return False
+        return True
+
+    def display_winner(self, winner):
+        self.board.print()
+        if winner == "draw":
+            print("It's a draw!")
+        else:
+            print(f"{winner} is the winner!")
 
 
 if __name__ == "__main__":
