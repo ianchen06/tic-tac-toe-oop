@@ -1,123 +1,116 @@
-class InvalidMoveError(Exception):
-    pass
+import random
 
 
 class Board:
-    def __init__(self, num_row, num_col):
-        print("Board is initializing...")
-        self.num_row = num_row
-        self.num_col = num_col
-        self.board = self.create_board()
+    def __init__(self):
+        self.board = [" " for _ in range(9)]  # 3x3 Tic Tac Toe board
 
-    def create_board(self):
-        print("Board is creating...")
-        return [[" " for _ in range(self.num_col)] for _ in range(self.num_row)]
+    def print_board(self):
+        for i in range(3):
+            print("|".join(self.board[i * 3 : (i + 1) * 3]))
+            if i < 2:
+                print("-----")
 
-    def print(self):
-        print("Board is printing...")
-        for row in self.board:
-            print(row)
+    def make_move(self, position, symbol):
+        if self.is_valid_move(position):
+            self.board[position] = symbol
+            return True
+        return False
 
-    def set_move(self, row, col, player):
-        print("Board is setting move...")
-        if self.board[row][col] != " ":
-            raise InvalidMoveError("Invalid move. Please enter valid numbers.")
-        self.board[row][col] = player
+    def is_valid_move(self, position):
+        if 0 <= position <= 8:
+            return self.board[position] == " "
+        return False
+
+    def check_winner(self, symbol):
+        # Check all winning conditions
+        for i in range(3):
+            # Check rows and columns
+            if (
+                self.board[i * 3]
+                == self.board[i * 3 + 1]
+                == self.board[i * 3 + 2]
+                == symbol
+            ) or (self.board[i] == self.board[i + 3] == self.board[i + 6] == symbol):
+                return True
+        # Check diagonals
+        if (self.board[0] == self.board[4] == self.board[8] == symbol) or (
+            self.board[2] == self.board[4] == self.board[6] == symbol
+        ):
+            return True
+        return False
+
+    def is_full(self):
+        return " " not in self.board
+
+
+class Player:
+    def __init__(self, symbol):
+        self.symbol = symbol
+
+    def make_move(self, board):
+        pass
+
+
+class HumanPlayer(Player):
+    def make_move(self, board):
+        try:
+            position = int(input(f"Player {self.symbol}, enter your move (0-8): "))
+        except ValueError:
+            return False
+        return board.make_move(position, self.symbol)
+
+
+class BotPlayer(Player):
+    def make_move(self, board):
+        valid_moves = [i for i in range(9) if board.is_valid_move(i)]
+        print(f"Valid moves: {valid_moves}")
+        position = random.choice(valid_moves)
+        print(f"BotPlayer {self.symbol} chooses position {position}")
+        return board.make_move(position, self.symbol)
 
 
 class Game:
-    def __init__(self, players=["X", "O"], num_row=3, num_col=3, starting_player="O"):
-        print("Game is initializing...")
-        self.players = players
-        self.board = Board(num_row, num_col)
-        self.current_player_idx = self.players.index(starting_player)
+    def __init__(self, player1, player2):
+        self.board = Board()
+        self.player1 = player1
+        self.player2 = player2
+        self.current_player = self.player1
 
     def switch_player(self):
-        print("Game is switching player...")
-        self.current_player_idx = (self.current_player_idx + 1) % len(self.players)
+        self.current_player = (
+            self.player1 if self.current_player == self.player2 else self.player2
+        )
 
-    def get_row_col(self, input_str):
-        try:
-            row, col = [int(x) for x in input_str.split(",")]
-        except ValueError:
-            raise InvalidMoveError(
-                "Invalid move. Please enter numbers separated by a comma."
-            )
-        if row < 0 or row >= self.board.num_row or col < 0 or col >= self.board.num_col:
-            raise InvalidMoveError("Invalid move. Please enter valid numbers.")
-        return row, col
-
-    def check_winner(self):
-        """
-        1. Check each row
-        2. Check each column
-        3. Check left to right diagonal
-        4. Check right to left diagonal
-        5. Return draw if board is full
-        6. Game is not finished
-        """
-        for row in self.board.board:
-            if len(set(row)) == 1:
-                return row[0]
-
-        for col_idx in range(self.board.num_col):
-            column = [
-                self.board.board[row_idx][col_idx]
-                for row_idx in range(self.board.num_row)
-            ]
-            if len(set(column)) == 1:
-                return column[0]
-
-        left_to_right_diag = []
-        for idx, row in enumerate(self.board.board):
-            left_to_right_diag.append(row[idx])
-        if len(set(left_to_right_diag)) == 1:
-            return left_to_right_diag[0]
-
-        right_to_left_diag = []
-        for idx, row in enumerate(self.board.board):
-            board_end_idx = self.board.num_row - 1
-            right_to_left_diag.append(row[board_end_idx - idx])
-        if len(set(right_to_left_diag)) == 1:
-            return right_to_left_diag[0]
-
-        all_marks = [mark for row in self.board.board for mark in row]
-        if not " " in all_marks:
-            return "draw"
-
-        return " "
-
-    def run(self):
-        print("Game is running...")
-        self.board.create_board()
+    def play(self):
         while True:
-            self.board.print()
-            if not self.process_player_move():
+            self.board.print_board()
+            if not self.current_player.make_move(self.board):
+                print("Invalid move, try again.")
                 continue
-            winner = self.check_winner()
-            if winner != " ":
-                self.display_winner(winner)
+
+            if self.board.check_winner(self.current_player.symbol):
+                self.board.print_board()
+                print(f"Player {self.current_player.symbol} wins!")
                 break
+
+            if self.board.is_full():
+                self.board.print_board()
+                print("It's a tie!")
+                break
+
             self.switch_player()
 
-    def process_player_move(self):
-        input_str = input("Enter your move: ")
-        try:
-            row, col = self.get_row_col(input_str)
-            self.board.set_move(row, col, self.players[self.current_player_idx])
-        except InvalidMoveError as e:
-            print(e)
-            return False
-        return True
 
-    def display_winner(self, winner):
-        self.board.print()
-        if winner == "draw":
-            print("It's a draw!")
-        else:
-            print(f"{winner} is the winner!")
-
-
-if __name__ == "__main__":
-    game = Game()
-    game.run()
+# To play the game
+num_human_players = input("How many human players? (1/2): ")
+player1 = HumanPlayer("X")
+player2 = BotPlayer("O")
+if num_human_players == "1":
+    player2 = BotPlayer("O")
+elif num_human_players == "2":
+    player2 = HumanPlayer("O")
+else:
+    print("Invalid input, defaulting to 1 human player.")
+game = Game(player1, player2)
+game.play()
